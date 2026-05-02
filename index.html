@@ -1,14 +1,201 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VerbaCosmos Pronunciation</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VerbaCosmos 🌌</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: 'Segoe UI', sans-serif;
+  background: radial-gradient(circle at top, #1a1a2e, #0f0f1a);
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.container {
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(10px);
+  padding: 20px;
+  border-radius: 20px;
+  width: 340px;
+  text-align: center;
+  box-shadow: 0 0 25px rgba(108,99,255,0.5);
+}
+
+.logo {
+  font-size: 28px;
+  font-weight: bold;
+  background: linear-gradient(90deg, #9f7aea, #6c63ff, #00c6ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 10px;
+}
+
+input, textarea {
+  width: 90%;
+  padding: 10px;
+  border-radius: 10px;
+  border: none;
+  margin: 8px 0;
+}
+
+button {
+  padding: 8px 10px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(45deg,#6c63ff,#9f7aea);
+  color: white;
+  margin: 5px;
+  cursor: pointer;
+}
+
+.hidden { display:none; }
+.result { margin-top:10px; font-weight:bold; }
+</style>
 </head>
+
 <body>
-    <h1>Welcome to VerbaCosmos</h1>
-    <p>This is your go-to place for pronunciation guides!</p>
-    <h2>How to Pronounce</h2>
-    <p>Follow our detailed phonetic guides and audio pronunciations to master your speaking skills.</p>
+
+<!-- LOGIN -->
+<div class="container" id="loginBox">
+<h2 class="logo">🌌 VerbaCosmos ✨</h2>
+<p>Enter the universe of language</p>
+<input id="username" placeholder="Enter name">
+<button onclick="login()">🚀 Enter</button>
+</div>
+
+<!-- APP -->
+<div class="container hidden" id="appBox">
+<h2 class="logo">🌌 VerbaCosmos ✨</h2>
+<h3 id="welcome"></h3>
+
+<input id="word" placeholder="Type word or sentence">
+
+<button onclick="speakWord()">🔊 Speak</button>
+<button onclick="checkPronunciation()">🎤 Check</button>
+<button onclick="startSpellingTest()">📝 Test</button>
+
+<p id="phonetic"></p>
+<p id="result" class="result"></p>
+
+<h4>🌟 Progress: <span id="progress"></span></h4>
+
+<hr>
+
+<!-- AI MODE -->
+<h4>🤖 Ask AI</h4>
+<textarea id="aiInput" placeholder="Ask meaning or language question..."></textarea>
+<button onclick="askAI()">Ask</button>
+<p id="aiResponse"></p>
+</div>
+
+<script>
+// LOGIN
+function login(){
+ let name=document.getElementById('username').value;
+ if(!name)return;
+ localStorage.setItem('user',name);
+ localStorage.setItem('score',0);
+ showApp();
+}
+
+function showApp(){
+ let name=localStorage.getItem('user');
+ document.getElementById('loginBox').classList.add('hidden');
+ document.getElementById('appBox').classList.remove('hidden');
+ document.getElementById('welcome').innerText="Hi "+name+" 🌙";
+ updateProgress();
+}
+
+function updateProgress(){
+ document.getElementById('progress').innerText=localStorage.getItem('score')||0;
+}
+
+// SPEAK
+function speakWord(){
+ let text=document.getElementById('word').value;
+ let u=new SpeechSynthesisUtterance(text);
+ u.lang='en-GB';
+ speechSynthesis.speak(u);
+
+ fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${text}`)
+ .then(r=>r.json())
+ .then(d=>{
+ document.getElementById('phonetic').innerText=d[0]?.phonetic||'';
+ });
+}
+
+// VOICE CHECK
+function checkPronunciation(){
+ let text=document.getElementById('word').value.toLowerCase();
+ let SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(!SR){alert('Use Chrome');return;}
+ let rec=new SR();
+ rec.lang='en-GB';
+ rec.start();
+ rec.onresult=e=>{
+ let spoken=e.results[0][0].transcript.toLowerCase();
+ let score=Number(localStorage.getItem('score')||0);
+ let res='';
+ if(spoken===text){res='Perfect 🌟';score++;}
+ else if(spoken.includes(text)){res='Almost ✨';}
+ else{res='Try again 🌙';}
+ localStorage.setItem('score',score);
+ document.getElementById('result').innerText=`You said: ${spoken} → ${res}`;
+ updateProgress();
+ };
+}
+
+// SPELLING TEST
+let testWord='';
+function startSpellingTest(){
+ let words=['beautiful','education','galaxy','universe','language'];
+ testWord=words[Math.floor(Math.random()*words.length)];
+
+ let u=new SpeechSynthesisUtterance(testWord);
+ u.lang='en-GB';
+ speechSynthesis.speak(u);
+
+ let answer=prompt('Type spelling:');
+ if(!answer)return;
+
+ if(answer.toLowerCase()===testWord){
+ alert('Correct 🎉');
+ let score=Number(localStorage.getItem('score')||0)+1;
+ localStorage.setItem('score',score);
+ updateProgress();
+ }else{
+ alert('Wrong ❌ Correct: '+testWord);
+ }
+}
+
+// AI MODE
+function askAI(){
+ let q=document.getElementById('aiInput').value.toLowerCase();
+
+ if(q.includes('meaning')){
+ let word=q.split(' ').pop();
+ fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`)
+ .then(r=>r.json())
+ .then(d=>{
+ let meaning=d[0]?.meanings[0]?.definitions[0]?.definition||'Not found';
+ document.getElementById('aiResponse').innerText=meaning;
+ });
+ return;
+ }
+
+ document.getElementById('aiResponse').innerText='Ask meanings like: meaning of galaxy 🌌';
+}
+
+window.onload=()=>{
+ if(localStorage.getItem('user'))showApp();
+};
+</script>
+
 </body>
 </html>
